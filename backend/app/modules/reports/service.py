@@ -14,7 +14,7 @@ from app.db.models import Report, User, Subscription
 from app.core.audit import log_action
 from app.core.config import settings
 from app.modules.reports.ai_engine import generate_life_signify_report
-from app.modules.reports.pdf_engine import generate_report_pdf
+from app.modules.reports.html_engine import generate_report_pdf as generate_html_report_pdf
 from app.modules.reports.blueprint import (
     get_tier_section_blueprint,
     get_all_tier_section_blueprints,
@@ -69,6 +69,31 @@ def get_report_blueprint(plan_name: Optional[str] = None) -> Dict[str, Any]:
         ),
     }
 
+
+def _ensure_section_payloads(report_content: Dict[str, Any], plan_name: str) -> Dict[str, Any]:
+    blueprint = get_tier_section_blueprint(plan_name)
+    section_payloads = report_content.get("section_payloads")
+    if not isinstance(section_payloads, dict):
+        section_payloads = {}
+
+    for section in blueprint.get("sections", []):
+        if not isinstance(section, dict):
+            continue
+        key = str(section.get("key") or "").strip()
+        title = str(section.get("title") or key.replace("_", " ").title()).strip()
+        if not key:
+            continue
+        if isinstance(section_payloads.get(key), dict):
+            continue
+        section_payloads[key] = {
+            "title": title,
+            "narrative": "Deterministic section is unavailable for this report input.",
+            "cards": [],
+            "bullets": [],
+        }
+
+    return section_payloads
+
 # =====================================================
 # REPORT ENRICHMENT LAYER
 # =====================================================
@@ -94,6 +119,7 @@ def enrich_report_content(report_content: dict, plan_name: str = "basic") -> dic
     report_content["report_blueprint"] = get_tier_section_blueprint(plan_name)
     report_content["meta"]["section_count"] = report_content["report_blueprint"]["section_count"]
     report_content["meta"]["blueprint_version"] = "2026-03-v2"
+    report_content["section_payloads"] = _ensure_section_payloads(report_content, plan_name)
 
     
     # Executive Brief - Core summary
@@ -168,21 +194,10 @@ def enrich_report_content(report_content: dict, plan_name: str = "basic") -> dic
     report_content.setdefault(
         "numerology_core",
         {
-            "pythagorean": {
-                "life_path_number": 5,
-                "destiny_number": 11,
-                "expression_number": 11
-            },
-            "chaldean": {
-                "name_number": 3
-            },
-            "email_analysis": {
-                "email_number": 3
-            },
-            "name_correction": {
-                "suggestion": "Name vibration is stable.",
-                "current_number": 3
-            }
+            "pythagorean": {},
+            "chaldean": {},
+            "email_analysis": {},
+            "name_correction": {},
         }
     )
     
@@ -191,10 +206,7 @@ def enrich_report_content(report_content: dict, plan_name: str = "basic") -> dic
         if "numerology_core" not in report_content:
             report_content["numerology_core"] = {}
         report_content["numerology_core"]["loshu_grid"] = {
-            "grid_counts": {
-                "1": 1, "2": 1, "3": 1, "4": 1, "5": 1, 
-                "6": 1, "7": 1, "8": 1, "9": 1
-            },
+            "grid_counts": {},
             "missing_numbers": []
         }
     
@@ -215,9 +227,9 @@ def enrich_report_content(report_content: dict, plan_name: str = "basic") -> dic
         report_content.setdefault(
             "compatibility_block",
             {
-                "compatible_numbers": [3, 5, 9, 11],
-                "challenging_numbers": [4, 6, 7, 8],
-                "relationship_guidance": "Maintain relationships with compatible numbers for synergy."
+                "compatible_numbers": [],
+                "challenging_numbers": [],
+                "relationship_guidance": "Compatibility guidance is based on available deterministic inputs."
             }
         )
     
@@ -312,19 +324,22 @@ def get_radar_data(db: Session, current_user: User, report_id: int) -> Dict[str,
 # SUBSCRIPTION VALIDATION
 # =====================================================
 
-def _validate_and_lock_subscription(db: Session, current_user: User) -> Subscription:
+def _validate_subscription(
+    db: Session,
+    current_user: User,
+    *,
+    lock_for_update: bool = False,
+) -> Subscription:
     """
-    Validate subscription and lock row for update to prevent race conditions
+    Validate active subscription and optionally lock the row for update.
     """
-    subscription = (
-        db.query(Subscription)
-        .filter(
-            Subscription.tenant_id == current_user.tenant_id,
-            Subscription.is_active.is_(True),
-        )
-        .with_for_update()
-        .first()
+    query = db.query(Subscription).filter(
+        Subscription.tenant_id == current_user.tenant_id,
+        Subscription.is_active.is_(True),
     )
+    if lock_for_update:
+        query = query.with_for_update()
+    subscription = query.first()
 
     if not subscription:
         logger.warning(f"No active subscription for tenant {current_user.tenant_id}")
@@ -527,8 +542,8 @@ def generate_ai_report_service(
     Generate AI-powered numerology report with plan-based limits
     """
     try:
-        # Validate subscription and lock for update
-        subscription = _validate_and_lock_subscription(db, current_user)
+        # Validate subscription without locking, so we do not hold DB locks during AI generation.
+        subscription = _validate_subscription(db, current_user, lock_for_update=False)
 
         # Determine plan from the active subscription only
         plan_name = _normalize_plan_name(subscription.plan_name or "basic")
@@ -563,6 +578,8 @@ def generate_ai_report_service(
             "career": intake_data.get("career", {}),
             "emotional": intake_data.get("emotional", {}),
             "life_events": intake_data.get("life_events", {}),
+            "business_history": intake_data.get("business_history", {}),
+            "health": intake_data.get("health", {}),
             "calibration": intake_data.get("calibration", {}),
             "contact": intake_data.get("contact", {}),
             "preferences": intake_data.get("preferences", {}),
@@ -607,10 +624,25 @@ def generate_ai_report_service(
             confidence_score=confidence_score,
         )
 
+        # Lock subscription only during usage update + commit to avoid long lock contention.
+        locked_subscription = _validate_subscription(db, current_user, lock_for_update=True)
+        locked_plan = _normalize_plan_name(locked_subscription.plan_name or "basic")
+        if locked_plan != plan_name:
+            raise HTTPException(
+                status_code=409,
+                detail="Subscription plan changed while generating report. Please retry.",
+            )
+
+        latest_used = locked_subscription.reports_used or 0
+        latest_limit = PLAN_LIMITS[locked_plan]
+        if latest_used >= latest_limit:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Monthly report limit ({latest_limit}) reached. Upgrade required.",
+            )
+
         db.add(report)
-        
-        # Increment usage counter
-        subscription.reports_used = used + 1
+        locked_subscription.reports_used = latest_used + 1
         
         db.commit()
         db.refresh(report)
@@ -629,7 +661,7 @@ def generate_ai_report_service(
 
         logger.info(
             f"Report generated successfully: {report.id} "
-            f"(used {used+1}/{limit} for plan {plan_name})"
+            f"(used {latest_used+1}/{latest_limit} for plan {plan_name})"
         )
         
         return report
@@ -753,11 +785,13 @@ def export_report_pdf(
     logger.info(f"Exporting report {report_id} to PDF for user {current_user.id}")
     
     try:
-        # Generate PDF from content
-        pdf_buffer = generate_report_pdf(report.content, watermark=watermark)
+        plan_tier = _normalize_plan_name(report.content.get("meta", {}).get("plan_tier"))
+        render_content = enrich_report_content(dict(report.content or {}), plan_tier)
+
+        # Keep one renderer path for consistent report style between web preview and download.
+        pdf_buffer = generate_html_report_pdf(render_content, watermark=watermark)
         
         # Determine filename
-        plan_tier = report.content.get("meta", {}).get("plan_tier", "standard")
         filename = f"NumAI_Strategic_Brief_{report_id}_{plan_tier}.pdf"
         
         # Return streaming response

@@ -49,6 +49,7 @@ openai>=1.30.0
 jinja2
 playwright
 pillow
+reportlab
 
 # =====================================================
 # CHARTS / ANALYTICS

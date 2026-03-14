@@ -46,6 +46,16 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
     password = Column(String, nullable=False)
+    full_name = Column(String, nullable=True)
+    mobile_no = Column(String, nullable=True)
+    country = Column(String, nullable=True)
+    state = Column(String, nullable=True)
+    payment_method = Column(String, nullable=True)
+    kyc_verified = Column(Boolean, default=False, nullable=False)
+    kyc_payment_id = Column(String, nullable=True)
+    kyc_verified_at = Column(DateTime, nullable=True)
+    chat_tokens_used = Column(Integer, default=0, nullable=False)
+    chat_token_limit = Column(Integer, default=1000, nullable=False)
 
     tenant_id = Column(Integer, ForeignKey("organizations.id"), nullable=False)
 

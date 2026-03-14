@@ -1862,6 +1862,8 @@ def build_interpretation_report(
     soul_urge = _safe_int(pyth.get("soul_urge_number"), _reduce_number(_alpha_sum(full_name)))
     personality = _safe_int(pyth.get("personality_number"), expression)
     name_number = _safe_int(chaldean.get("name_number"), _safe_int(name_correction.get("current_number"), 0))
+    mulank = _reduce_number(day)
+    bhagyank = life_path or _reduce_number(day + month + _reduce_number(year))
 
     name_compound = _alpha_sum(full_name)
     name_trait = NUMBER_TRAITS.get(name_number or life_path or 5, NUMBER_TRAITS[5])
@@ -2052,6 +2054,14 @@ def build_interpretation_report(
     payloads["growth_blueprint"] = _section_payload("growth_blueprint", "Growth blueprint sequences stabilize -> optimize -> scale.", "Current phase is correction-led stabilization before aggressive expansion.", f"Risk band {risk_band} requires structural readiness before scale.", "Premature expansion can lock volatility into operations.", "Run staged roadmap with gate checks across 90 days.")
     payloads["strategic_execution_roadmap"] = _section_payload("strategic_execution_roadmap", "Execution roadmap converts intelligence into a 90-day operating system.", "Multiple interventions need coordinated sequencing.", "Correction outcomes compound only in operational order.", "Unsequenced action wastes effort and obscures ROI.", "Days 1-30 stabilize, 31-60 optimize, 61-90 scale tests.", bullets=["Days 1-30: metric deficit stabilization and behavior lock.", "Days 31-60: identity corrections (name/mobile/email/signature).", "Days 61-90: timing alignment and controlled scale tests."])
     payloads["closing_synthesis"] = _section_payload("closing_synthesis", f"Final synthesis: {full_name} में clear leverage potential है, यदि correction priorities को disciplined execution के साथ चलाया जाए।", "Profile calibration-sensitive है, fundamentally blocked नहीं।", "Strength-deficit architecture स्पष्ट है और सही sequence से correct की जा सकती है।", "Protocol-led execution constraints को strategic advantage में बदल सकता है।", "Correction stack, timing control, और quarterly recalibration पर committed रहें।")
+
+    repeating_numbers = [
+        number
+        for number in range(1, 10)
+        if _safe_int(grid_counts.get(str(number), grid_counts.get(number, 0)), 0) > 1
+    ]
+    mobile_classification = "supportive" if mobile_vibration in {mulank, bhagyank, destiny} else "neutral"
+    compatibility_level = _safe_text(compatibility.get("compatibility_level"), "Moderate")
 
     if plan_name == "basic":
         mulank = _reduce_number(day)

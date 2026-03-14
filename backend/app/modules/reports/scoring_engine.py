@@ -281,6 +281,8 @@ def life_stability_index(data: Dict[str, Any], profile: Dict[str, Any]) -> int:
     components = [
         {"value": normalize(data.get("emotional_stability"), 1, 10), "weight": 0.12},
         {"value": _inverse_normalize(data.get("stress_level"), 1, 10), "weight": 0.10},
+        {"value": normalize(data.get("sleep_hours"), 4, 9), "weight": 0.06},
+        {"value": normalize(data.get("exercise_frequency_per_week"), 0, 7), "weight": 0.05},
         {"value": _inverse_normalize(data.get("debt_ratio"), 0, 100), "weight": 0.07},
         {"value": normalize(data.get("savings_ratio"), 0, 100), "weight": 0.06},
         {"value": _inverse_normalize(data.get("major_setbacks"), 0, 6), "weight": 0.06},
@@ -302,6 +304,8 @@ def emotional_regulation_index(data: Dict[str, Any], profile: Dict[str, Any]) ->
         {"value": normalize(data.get("impulse_control"), 1, 10), "weight": 0.12},
         {"value": _inverse_normalize(data.get("decision_confusion"), 1, 10), "weight": 0.11},
         {"value": normalize(data.get("emotional_stability"), 1, 10), "weight": 0.16},
+        {"value": normalize(data.get("sleep_hours"), 4, 9), "weight": 0.08},
+        {"value": normalize(data.get("exercise_frequency_per_week"), 0, 7), "weight": 0.06},
         {"value": profile["archetype_emotional"], "weight": 0.14},
         {"value": profile["emotional_balance"], "weight": 0.11},
         {"value": 1.0 - _clamp(profile["repeating_emotional"] / 4.0), "weight": 0.08},

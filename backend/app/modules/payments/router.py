@@ -8,7 +8,9 @@ from app.modules.users.router import get_current_user
 from app.db.models import User
 from app.modules.payments.service import (
     create_payment_order,
-    verify_payment_signature
+    create_kyc_order,
+    verify_kyc_payment_signature,
+    verify_payment_signature,
 )
 
 router = APIRouter(tags=["Payments"])
@@ -83,6 +85,14 @@ def create_order(
     return create_payment_order(db, current_user, payload.plan)
 
 
+@router.post("/create-kyc-order")
+def create_kyc_payment_order(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return create_kyc_order(db, current_user)
+
+
 # =====================================================
 # VERIFY PAYMENT
 # =====================================================
@@ -94,6 +104,21 @@ def verify_payment(
     current_user: User = Depends(get_current_user)
 ):
     return verify_payment_signature(
+        db=db,
+        current_user=current_user,
+        razorpay_order_id=payload.razorpay_order_id,
+        razorpay_payment_id=payload.razorpay_payment_id,
+        razorpay_signature=payload.razorpay_signature,
+    )
+
+
+@router.post("/verify-kyc")
+def verify_kyc_payment(
+    payload: VerifyPaymentRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    return verify_kyc_payment_signature(
         db=db,
         current_user=current_user,
         razorpay_order_id=payload.razorpay_order_id,

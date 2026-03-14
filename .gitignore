@@ -26,3 +26,7 @@ __pycache__/
 *.pyc
 .env
 logs/
+.vite/
+frontend/.vite/
+backend/.venv/
+backend/.venv_fix/

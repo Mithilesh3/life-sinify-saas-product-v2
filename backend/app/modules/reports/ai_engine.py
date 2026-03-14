@@ -114,6 +114,8 @@ def _build_intake_context(request_data: Dict[str, Any]) -> Dict[str, Any]:
         "career": _clean_mapping(request_data.get("career") or {}),
         "emotional": _clean_mapping(request_data.get("emotional") or {}),
         "life_events": _clean_mapping(request_data.get("life_events") or {}),
+        "business_history": _clean_mapping(request_data.get("business_history") or {}),
+        "health": _clean_mapping(request_data.get("health") or {}),
         "calibration": _clean_mapping(request_data.get("calibration") or {}),
         "contact": _clean_mapping(contact),
         "preferences": _clean_mapping(preferences),
@@ -366,6 +368,7 @@ def flatten_input(
     financial = data.get("financial") or {}
     career = data.get("career") or {}
     emotional = data.get("emotional") or {}
+    health = data.get("health") or {}
     focus = data.get("focus") or {}
     life_events = data.get("life_events") or {}
     calibration = data.get("calibration") or {}
@@ -423,6 +426,10 @@ def flatten_input(
         "decision_clarity": decision_clarity,
         "impulse_control": impulse_control,
         "emotional_stability": emotional.get("emotional_stability"),
+        "sleep_hours": health.get("sleep_hours"),
+        "exercise_frequency_per_week": health.get("exercise_frequency_per_week"),
+        "alcohol": health.get("alcohol"),
+        "smoking": health.get("smoking"),
 
         "life_focus": focus.get("life_focus"),
         "major_setbacks": major_setbacks,
@@ -445,6 +452,45 @@ def flatten_input(
         "lo_shu_present_digits": loshu_signals["lo_shu_present_digits"],
         "lo_shu_missing_digits": loshu_signals["lo_shu_missing_digits"],
         "repeating_digits": loshu_signals["repeating_digits"],
+    }
+
+
+# =====================================================
+# INPUT AVAILABILITY SIGNALS
+# =====================================================
+
+
+def _has_meaningful_value(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, dict):
+        return any(_has_meaningful_value(item) for item in value.values())
+    if isinstance(value, (list, tuple, set)):
+        return any(_has_meaningful_value(item) for item in value)
+    return True
+
+
+def _build_input_availability(intake_context: Dict[str, Any]) -> Dict[str, bool]:
+    intake_context = intake_context or {}
+
+    identity = intake_context.get("identity") or {}
+    birth_details = intake_context.get("birth_details") or {}
+
+    return {
+        "identity": _has_meaningful_value(identity),
+        "birth_details": _has_meaningful_value(birth_details),
+        "focus": _has_meaningful_value(intake_context.get("focus")),
+        "current_problem": _has_meaningful_value(intake_context.get("current_problem")),
+        "financial": _has_meaningful_value(intake_context.get("financial")),
+        "career": _has_meaningful_value(intake_context.get("career")),
+        "emotional": _has_meaningful_value(intake_context.get("emotional")),
+        "business_history": _has_meaningful_value(intake_context.get("business_history")),
+        "health": _has_meaningful_value(intake_context.get("health")),
+        "calibration": _has_meaningful_value(intake_context.get("calibration")),
+        "contact": _has_meaningful_value(intake_context.get("contact")),
+        "preferences": _has_meaningful_value(intake_context.get("preferences")),
     }
 
 
@@ -651,9 +697,17 @@ def generate_life_signify_report(
         "Karma Pressure": scores.get("karma_pressure_index", 50),
     }
 
+    section_payloads = ai_sections.get("section_payloads")
+    if not isinstance(section_payloads, dict) or not section_payloads:
+        section_payloads = (interpretation_draft or {}).get("section_payloads")
+    if not isinstance(section_payloads, dict):
+        section_payloads = {}
+
     # -------------------------------------------------
     # FINAL REPORT JSON
     # -------------------------------------------------
+
+    input_availability = _build_input_availability(intake_context)
 
     report_output = {
 
@@ -674,6 +728,8 @@ def generate_life_signify_report(
         "preferences": intake_context.get("preferences") or {},
 
         "current_problem": current_problem,
+
+        "input_availability": input_availability,
 
         "core_metrics": scores,
 
@@ -773,7 +829,7 @@ def generate_life_signify_report(
 
         "numerology_archetype": archetype,
 
-        "section_payloads": ai_sections.get("section_payloads"),
+        "section_payloads": section_payloads,
 
         "disclaimer": {
             "framework": "Tiered Numerology Intelligence System",

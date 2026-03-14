@@ -23,9 +23,14 @@ logger = logging.getLogger(__name__)
 # =====================================================
 def create_user(
     db: Session,
+    full_name: str,
+    mobile_no: str,
+    country: str,
+    state: str,
     email: str,
     password: str,
     organization_name: str,
+    payment_method: str | None = None,
 ):
     normalized_email = (email or "").strip().lower()
     normalized_org_name = " ".join(str(organization_name or "").split())
@@ -52,10 +57,16 @@ def create_user(
         db.flush()
 
         user = User(
+            full_name=full_name,
+            mobile_no=mobile_no,
+            country=country,
+            state=state,
             email=normalized_email,
             password=hash_password(password),
             tenant_id=organization.id,
             role="admin",
+            payment_method=payment_method,
+            kyc_verified=False,
         )
         db.add(user)
         db.flush()

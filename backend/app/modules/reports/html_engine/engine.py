@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import base64
 from datetime import datetime
+from functools import lru_cache
 from io import BytesIO
 import json
 import logging
 import mimetypes
+import os
 from pathlib import Path
 import re
+import time
 from typing import Any, Dict, List, Sequence
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -41,6 +44,7 @@ TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 STRATEGIC_TEMPLATE_NAME = "strategic_life_audit.html"
 BASIC_TEMPLATE_NAME = "basic_numerology_report.html"
 ASSETS_ROOT = Path(__file__).resolve().parents[3] / "assets"
+PDF_OPTIMIZE_OUTPUT = os.getenv("PDF_OPTIMIZE_OUTPUT", "false").strip().lower() in {"1", "true", "yes", "on"}
 
 METRIC_CONFIG: Sequence[Dict[str, str]] = (
     {
@@ -200,12 +204,14 @@ def _join_numbers(values: Sequence[Any], default: str = "-") -> str:
     return ", ".join(cleaned) if cleaned else default
 
 
+@lru_cache(maxsize=128)
 def _as_uri(path: Path) -> str:
     if path.exists():
         return path.resolve().as_uri()
     return ""
 
 
+@lru_cache(maxsize=256)
 def _as_image_src(path: Path, max_dim: int = 220) -> str:
     if not path.exists():
         return ""
@@ -256,6 +262,7 @@ def _as_image_src(path: Path, max_dim: int = 220) -> str:
     return f"data:{mime};base64,{encoded}"
 
 
+@lru_cache(maxsize=64)
 def _as_background_src(path: Path, max_dim: int = 900) -> str:
     if not path.exists():
         return ""
@@ -887,7 +894,11 @@ def _render_pdf_with_playwright(html_content: str) -> bytes:
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
             page = browser.new_page(viewport={"width": 1240, "height": 1754})
-            page.set_content(html_content, wait_until="networkidle")
+            page.set_content(html_content, wait_until="domcontentloaded")
+            try:
+                page.wait_for_load_state("networkidle", timeout=5000)
+            except PlaywrightError:
+                logger.warning("Timed out waiting for network idle; continuing PDF render.")
             page.emulate_media(media="print")
 
             try:
@@ -946,10 +957,27 @@ def _optimize_pdf_bytes(pdf_bytes: bytes) -> bytes:
 
 
 def generate_report_pdf(data: Dict[str, Any], watermark: bool = False) -> BytesIO:
+    started_at = time.perf_counter()
     context = _build_context(data, watermark=watermark)
+    context_ready_at = time.perf_counter()
     html_content = _render_html(context)
+    html_ready_at = time.perf_counter()
     pdf_bytes = _render_pdf_with_playwright(html_content)
-    pdf_bytes = _optimize_pdf_bytes(pdf_bytes)
+    pdf_ready_at = time.perf_counter()
+    if PDF_OPTIMIZE_OUTPUT:
+        pdf_bytes = _optimize_pdf_bytes(pdf_bytes)
+    optimized_at = time.perf_counter()
+
+    logger.info(
+        "PDF timing (ms) context=%d html=%d render=%d optimize=%d total=%d optimize_enabled=%s",
+        int((context_ready_at - started_at) * 1000),
+        int((html_ready_at - context_ready_at) * 1000),
+        int((pdf_ready_at - html_ready_at) * 1000),
+        int((optimized_at - pdf_ready_at) * 1000),
+        int((optimized_at - started_at) * 1000),
+        PDF_OPTIMIZE_OUTPUT,
+    )
+
     buffer = BytesIO(pdf_bytes)
     buffer.seek(0)
     return buffer

@@ -77,17 +77,28 @@ def admin_required(current_user: User = Depends(get_current_user)):
 def register(user: UserCreate, db: Session = Depends(get_db)):
     new_user = create_user(
         db,
+        user.full_name,
+        user.mobile_no,
+        user.country,
+        user.state,
         user.email,
         user.password,
-        user.organization_name
+        user.organization_name,
+        user.payment_method,
     )
 
     return UserResponse(
         id=new_user.id,
+        full_name=new_user.full_name,
+        mobile_no=new_user.mobile_no,
+        country=new_user.country,
+        state=new_user.state,
         email=new_user.email,
         tenant_id=new_user.tenant_id,
         role=new_user.role,
-        plan=new_user.organization.plan
+        plan=new_user.organization.plan,
+        payment_method=new_user.payment_method,
+        kyc_verified=new_user.kyc_verified,
     )
 
 
@@ -126,6 +137,10 @@ def read_me(
 
     return {
         "id": current_user.id,
+        "full_name": current_user.full_name,
+        "mobile_no": current_user.mobile_no,
+        "country": current_user.country,
+        "state": current_user.state,
         "email": current_user.email,
         "role": current_user.role,
         "organization": {
@@ -138,7 +153,14 @@ def read_me(
             "is_active": subscription.is_active if subscription else False,
             "end_date": subscription.end_date if subscription else None,
             "reports_used": subscription.reports_used if subscription else 0,
-        }
+        },
+        "payment_method": current_user.payment_method,
+        "kyc_verified": bool(current_user.kyc_verified),
+        "assistant_usage": {
+            "used_tokens": current_user.chat_tokens_used or 0,
+            "token_limit": current_user.chat_token_limit or 1000,
+            "remaining_tokens": max(0, (current_user.chat_token_limit or 1000) - (current_user.chat_tokens_used or 0)),
+        },
     }
 
 

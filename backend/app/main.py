@@ -13,6 +13,7 @@ from app.modules.users.router import router as users_router
 from app.modules.reports.router import router as reports_router
 from app.modules.payments.router import router as payments_router
 from app.modules.admin.router import router as admin_router
+from app.modules.assistant.router import router as assistant_router
 
 from app.core.config import settings
 
@@ -78,6 +79,36 @@ def startup_event():
             connection.execute(
                 text("ALTER TABLE reports ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ")
             )
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS payment_method VARCHAR")
+            )
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR")
+            )
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_no VARCHAR")
+            )
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS country VARCHAR")
+            )
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS state VARCHAR")
+            )
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_verified BOOLEAN DEFAULT FALSE")
+            )
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_payment_id VARCHAR")
+            )
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS kyc_verified_at TIMESTAMPTZ")
+            )
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS chat_tokens_used INTEGER DEFAULT 0")
+            )
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN IF NOT EXISTS chat_token_limit INTEGER DEFAULT 1000")
+            )
             connection.execute(text("SELECT 1"))
 
         logger.info("✅ Database connected.")
@@ -99,6 +130,7 @@ app.include_router(users_router, prefix="/api/users")
 app.include_router(reports_router, prefix="/api/reports")
 app.include_router(payments_router, prefix="/api/payments")
 app.include_router(admin_router, prefix="/api/admin")
+app.include_router(assistant_router, prefix="/api/assistant")
 
 
 # =====================================================
