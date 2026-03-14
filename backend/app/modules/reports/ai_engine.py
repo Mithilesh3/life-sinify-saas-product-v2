@@ -1,0 +1,789 @@
+from typing import Dict, Any
+from datetime import datetime
+import re
+import traceback
+
+from app.modules.reports.interpretation_engine import build_interpretation_report
+from app.modules.reports.scoring_engine import generate_score_summary
+from app.modules.reports.llm_engine import generate_ai_narrative
+from app.modules.numerology.core_engine import generate_numerology_profile
+
+from app.modules.reports.remedy_engine import generate_remedy_protocol
+from app.modules.reports.archetype_engine import generate_numerology_archetype
+
+from app.modules.numerology.business_engine import analyze_business_name
+
+from app.core.config import settings
+
+
+# =====================================================
+# PLAN CONFIGURATION
+# =====================================================
+
+PLAN_FEATURES = {
+    "basic": {"token_multiplier": 0.7},
+    "pro": {"token_multiplier": 0.9},
+    "premium": {"token_multiplier": 1.1},
+    "enterprise": {"token_multiplier": 1.3},
+}
+
+FOCUS_LABELS = {
+    "finance_debt": "वित्तीय दबाव और debt management",
+    "career_growth": "करियर ग्रोथ और positioning",
+    "relationship": "रिलेशनशिप पैटर्न और compatibility",
+    "health_stability": "स्वास्थ्य स्थिरता और sustainable routine",
+    "emotional_confusion": "भावनात्मक स्पष्टता और inner stability",
+    "business_decision": "बिज़नेस दिशा और strategic decisions",
+    "general_alignment": "समग्र life alignment",
+}
+
+FOCUS_ACTIONS = {
+    "finance_debt": "cash flow को stabilize करें, debt discipline मजबूत करें, और repeatable savings habit बनाएं",
+    "career_growth": "ऐसे roles और projects चुनें जो credibility को compound करें और energy को scatter न होने दें",
+    "relationship": "close relationships में clarity, healthy boundaries, और communication quality सुधारें",
+    "health_stability": "sleep, routine, और lower-stress decision cycles से energy को protect करें",
+    "emotional_confusion": "major choices से पहले internal noise कम करें और steadier routines build करें",
+    "business_decision": "reactive expansion के बजाय disciplined execution को priority दें",
+    "general_alignment": "priorities simplify करके daily action को long-term direction के साथ align करें",
+}
+
+METRIC_LABELS = {
+    "life_stability_index": "Life Stability",
+    "financial_discipline_index": "Financial Discipline",
+    "emotional_regulation_index": "Emotional Regulation",
+    "dharma_alignment_score": "Dharma Alignment",
+    "confidence_score": "Decision Clarity",
+}
+
+METRIC_STRENGTHS = {
+    "life_stability_index": "जब priorities clear हों तब structure create करने की reliable capacity",
+    "financial_discipline_index": "money aur risk ke around measured decisions lene ka instinct",
+    "emotional_regulation_index": "pressure ke baad composed rehne aur recover karne ki capacity",
+    "dharma_alignment_score": "effort, timing, aur purpose ke beech strong alignment",
+    "confidence_score": "grounded decisions lene ke liye kaafi self-awareness aur momentum",
+}
+
+METRIC_RISKS = {
+    "life_stability_index": "routine me inconsistency important moments par execution ko weak kar sakti hai",
+    "financial_discipline_index": "strong budgeting structure ke bina money decisions drift kar sakte hain",
+    "emotional_regulation_index": "agar recovery habits protected na hon to stress judgment ko distort kar sakta hai",
+    "dharma_alignment_score": "energy un paths par spend ho sakti hai jo long-term progress me compound nahi karte",
+    "confidence_score": "inputs unclear hone se precision kam ho rahi hai, isliye major decisions ko extra validation chahiye",
+}
+
+
+# =====================================================
+# INTERNAL HELPERS
+# =====================================================
+
+
+def _clean_mapping(values: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(values, dict):
+        return {}
+    return {
+        key: value
+        for key, value in (values or {}).items()
+        if value not in (None, "", [], {})
+    }
+
+
+def _prepare_identity(identity: Dict[str, Any], birth_details: Dict[str, Any]) -> Dict[str, Any]:
+    prepared = _clean_mapping(identity)
+    date_of_birth = (birth_details or {}).get("date_of_birth")
+    if date_of_birth and not prepared.get("date_of_birth"):
+        prepared["date_of_birth"] = date_of_birth
+    return prepared
+
+
+def _build_intake_context(request_data: Dict[str, Any]) -> Dict[str, Any]:
+    request_data = request_data or {}
+    birth_details = request_data.get("birth_details") or {}
+    contact = request_data.get("contact") or {}
+    preferences = request_data.get("preferences") or {}
+    identity = _prepare_identity(request_data.get("identity") or {}, birth_details)
+
+    mobile_number = contact.get("mobile_number")
+    if mobile_number and not identity.get("mobile_number"):
+        identity["mobile_number"] = mobile_number
+
+    return {
+        "identity": identity,
+        "birth_details": _clean_mapping(birth_details),
+        "focus": _clean_mapping(request_data.get("focus") or {}),
+        "financial": _clean_mapping(request_data.get("financial") or {}),
+        "career": _clean_mapping(request_data.get("career") or {}),
+        "emotional": _clean_mapping(request_data.get("emotional") or {}),
+        "life_events": _clean_mapping(request_data.get("life_events") or {}),
+        "calibration": _clean_mapping(request_data.get("calibration") or {}),
+        "contact": _clean_mapping(contact),
+        "preferences": _clean_mapping(preferences),
+        "current_problem": (request_data.get("current_problem") or "").strip(),
+    }
+
+
+def _metric_extremes(scores: Dict[str, Any]) -> tuple[tuple[str, int], tuple[str, int]]:
+    metric_pairs = []
+    for key in METRIC_LABELS:
+        raw_value = scores.get(key, 50)
+        try:
+            value = int(raw_value)
+        except (TypeError, ValueError):
+            value = 50
+        metric_pairs.append((key, value))
+
+    strongest = max(metric_pairs, key=lambda item: item[1])
+    weakest = min(metric_pairs, key=lambda item: item[1])
+    return strongest, weakest
+
+
+def _build_personalized_fallback(
+    intake_context: Dict[str, Any],
+    numerology_core: Dict[str, Any],
+    scores: Dict[str, Any],
+    current_problem: str,
+) -> Dict[str, Any]:
+    identity = intake_context.get("identity") or {}
+    birth_details = intake_context.get("birth_details") or {}
+    focus = intake_context.get("focus") or {}
+    financial = intake_context.get("financial") or {}
+    career = intake_context.get("career") or {}
+    emotional = intake_context.get("emotional") or {}
+
+    full_name = identity.get("full_name") or "User"
+    first_name = full_name.split()[0] if full_name else "User"
+    focus_key = focus.get("life_focus") or "general_alignment"
+    focus_label = FOCUS_LABELS.get(focus_key, FOCUS_LABELS["general_alignment"])
+    focus_action = FOCUS_ACTIONS.get(focus_key, FOCUS_ACTIONS["general_alignment"])
+
+    pythagorean = numerology_core.get("pythagorean") or {}
+    life_path = pythagorean.get("life_path_number")
+    destiny_number = pythagorean.get("destiny_number")
+
+    strongest, weakest = _metric_extremes(scores)
+    strongest_label = METRIC_LABELS[strongest[0]]
+    weakest_label = METRIC_LABELS[weakest[0]]
+    strongest_message = METRIC_STRENGTHS[strongest[0]]
+    weakest_message = METRIC_RISKS[weakest[0]]
+
+    confidence = scores.get("confidence_score", 50)
+    risk_band = scores.get("risk_band", "Correctable")
+    monthly_income = financial.get("monthly_income")
+    risk_tolerance = financial.get("risk_tolerance")
+    industry = career.get("industry")
+    role = career.get("role") or "professional"
+    anxiety_level = emotional.get("anxiety_level")
+    decision_confusion = emotional.get("decision_confusion")
+    date_of_birth = birth_details.get("date_of_birth") or identity.get("date_of_birth")
+    mobile_analysis = numerology_core.get("mobile_analysis") or {}
+    mobile_vibration = mobile_analysis.get("mobile_vibration")
+
+    problem_statement = current_problem or "समग्र दिशा और long-term stability"
+    role_phrase = role.replace("_", " ")
+    industry_phrase = f" ({industry})" if industry else ""
+    income_phrase = f" मासिक आय लगभग {monthly_income} का इनपुट उपलब्ध है।" if monthly_income else ""
+    risk_phrase = f" Risk tolerance वर्तमान में {str(risk_tolerance).lower()} श्रेणी में है।" if risk_tolerance else ""
+    anxiety_phrase = f" Reported anxiety level {anxiety_level}/10 है।" if anxiety_level is not None else ""
+    confusion_phrase = (
+        f" Decision confusion {decision_confusion}/10 है, इसलिए बड़े decisions में extra validation उपयोगी रहेगा।"
+        if decision_confusion is not None
+        else ""
+    )
+    date_phrase = f" Date of birth input {date_of_birth} से numerology core derive हुआ है।" if date_of_birth else ""
+    low_data_note = (
+        " Behavioral intake limited है, इसलिए कुछ intelligence metrics neutral baseline पर रह सकते हैं।"
+        if int(scores.get("data_completeness_score", 0) or 0) <= 35
+        else ""
+    )
+    mobile_phrase = f" Mobile vibration {mobile_vibration} daily communication tone को influence कर रहा है।" if mobile_vibration else ""
+
+    business_signals = numerology_core.get("business_analysis") or {}
+    business_strength = business_signals.get(
+        "business_strength",
+        f"{first_name} की प्रोफाइल ऐसे strategic work को support करती है जहाँ clarity, reputation, और disciplined follow-through reward मिलता है।",
+    )
+    business_risk = business_signals.get(
+        "risk_factor",
+        f"मुख्य business risk यह है कि pressure बढ़ने पर {weakest_label.lower()} execution को slow कर सकता है।",
+    )
+    compatible_industries = business_signals.get("compatible_industries") or []
+
+    compatibility = numerology_core.get("compatibility") or {}
+    compatibility_guidance = (
+        f"Current compatibility signal {compatibility.get('compatibility_level', 'Moderate')} है "
+        f"जिसका score {compatibility.get('compatibility_score', 0)}/100 है।"
+        if compatibility
+        else f"{first_name} के लिए वे relationships सबसे बेहतर हैं जो {strongest_label.lower()} को reinforce करें और {weakest_label.lower()} पर pressure कम करें।"
+    )
+
+    compatible_numbers = [number for number in [life_path, destiny_number] if isinstance(number, int)]
+    challenging_numbers = []
+
+    return {
+        "_fallback_used": True,
+        "executive_brief": {
+            "summary": (
+                f"{full_name} की report का central focus {focus_label} है। "
+                f"Life Path {life_path or 'N/A'} और Destiny {destiny_number or 'N/A'} से स्पष्ट होता है कि profile में {strongest_message} मौजूद है, "
+                f"जबकि current pressure point {weakest_message} है। "
+                f"Immediate concern {problem_statement} से जुड़ा हुआ है।{date_phrase}{mobile_phrase}{low_data_note}"
+            ),
+            "key_strength": f"आपका strongest signal {strongest_label} है। इसका सीधा मतलब है {strongest_message}।",
+            "key_risk": f"सबसे sensitive area {weakest_label} है, जो बताता है कि {weakest_message}।",
+            "strategic_focus": (
+                f"अभी पहली priority यह होनी चाहिए कि आप {focus_action}। हर major decision को stronger {weakest_label.lower()} routine के through filter करें।"
+            ),
+        },
+        "analysis_sections": {
+            "career_analysis": (
+                f"{first_name} की {role_phrase}{industry_phrase} profile में ऐसे roles बेहतर रहते हैं जो "
+                f"{strongest_label.lower()} को reward करें, न कि constant reactive change को। Dharma alignment {scores.get('dharma_alignment_score', 50)}/100 है, "
+                f"इसलिए work choices को {focus_label} के stated goal के पास रखना बेहतर रहेगा।"
+            ),
+            "decision_profile": (
+                f"Current decision clarity {confidence}/100 है और overall risk band {risk_band} है। "
+                f"{confusion_phrase if confusion_phrase else 'Major choices बेहतर होंगे जब आप decision speed थोड़ी slow करके assumptions validate करेंगे।'}"
+            ),
+            "emotional_analysis": (
+                f"Emotional regulation {scores.get('emotional_regulation_index', 50)}/100 है।{anxiety_phrase}"
+                f" यह signal करता है कि recovery routine और lower-noise environment judgment quality को सीधे improve करेंगे।"
+            ),
+            "financial_analysis": (
+                f"Financial discipline {scores.get('financial_discipline_index', 50)}/100 है।{income_phrase}"
+                f"{risk_phrase} अभी सबसे उपयोगी बदलाव यह होगा कि money decisions को अधिक structured और कम reactive बनाया जाए।"
+            ),
+        },
+        "strategic_guidance": {
+            "short_term": f"Short term में पहले {weakest_label.lower()} को stabilize करें और focus को {focus_label} पर centered रखें।",
+            "mid_term": f"Mid term में {strongest_label.lower()} को repeatable weekly system में convert करें, खासकर work और finance decisions में।",
+            "long_term": f"Life Path {life_path or 'N/A'} को bigger moves के guide की तरह use करें और scale तभी करें जब {weakest_label.lower()} recurring bottleneck न रहे।",
+        },
+        "growth_blueprint": {
+            "phase_1": f"Noise कम करके {problem_statement} के आसपास stable base create करें।",
+            "phase_2": f"{strongest_label.lower()} को consistency, better filters, और cleaner routines से visible advantage बनाएं।",
+            "phase_3": f"Bigger opportunities में तभी expand करें जब {focus_label} stronger execution discipline से support हो।",
+        },
+        "business_block": {
+            "business_strength": business_strength,
+            "risk_factor": business_risk,
+            "compatible_industries": compatible_industries,
+        },
+        "compatibility_block": {
+            "compatible_numbers": compatible_numbers,
+            "challenging_numbers": challenging_numbers,
+            "relationship_guidance": compatibility_guidance,
+        },
+    }
+
+
+# =====================================================
+# INPUT FLATTENER
+# =====================================================
+
+
+def _reduce_number(value: int) -> int:
+    while value > 9 and value not in (11, 22, 33):
+        value = sum(int(char) for char in str(value))
+    return value
+
+
+def _derive_mulank(date_of_birth: str) -> int:
+    text = str(date_of_birth or "").strip()
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%Y/%m/%d", "%d.%m.%Y"):
+        try:
+            parsed = datetime.strptime(text, fmt)
+            return _reduce_number(parsed.day)
+        except ValueError:
+            continue
+    return 0
+
+
+def _derive_personal_year(date_of_birth: str) -> int:
+    text = str(date_of_birth or "").strip()
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%Y/%m/%d", "%d.%m.%Y"):
+        try:
+            parsed = datetime.strptime(text, fmt)
+            total = parsed.day + parsed.month + sum(int(char) for char in str(datetime.utcnow().year))
+            return _reduce_number(total)
+        except ValueError:
+            continue
+    return 0
+
+
+def _extract_loshu_signals(numerology_core: Dict[str, Any]) -> Dict[str, Any]:
+    loshu = (numerology_core or {}).get("loshu_grid") or {}
+    grid_counts = loshu.get("grid_counts") if isinstance(loshu, dict) else {}
+    if not isinstance(grid_counts, dict):
+        grid_counts = {}
+
+    present_digits = []
+    missing_digits = []
+    repeating_digits: Dict[int, int] = {}
+    for digit in range(1, 10):
+        raw_count = grid_counts.get(str(digit), grid_counts.get(digit, 0))
+        try:
+            count = int(raw_count)
+        except (TypeError, ValueError):
+            count = 0
+        if count > 0:
+            present_digits.append(digit)
+            if count > 1:
+                repeating_digits[digit] = count
+        else:
+            missing_digits.append(digit)
+
+    explicit_missing = loshu.get("missing_numbers") if isinstance(loshu, dict) else None
+    if isinstance(explicit_missing, list) and explicit_missing:
+        normalized_missing = []
+        for item in explicit_missing:
+            try:
+                number = int(item)
+            except (TypeError, ValueError):
+                continue
+            if 1 <= number <= 9:
+                normalized_missing.append(number)
+        if normalized_missing:
+            missing_digits = sorted(set(normalized_missing))
+            present_digits = [digit for digit in range(1, 10) if digit not in missing_digits]
+
+    return {
+        "lo_shu_present_digits": present_digits,
+        "lo_shu_missing_digits": missing_digits,
+        "repeating_digits": repeating_digits,
+    }
+
+
+def flatten_input(
+    data: Dict[str, Any],
+    *,
+    numerology_core: Dict[str, Any] | None = None,
+    intake_context: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+
+    data = data or {}
+    numerology_core = numerology_core or {}
+    intake_context = intake_context or {}
+
+    financial = data.get("financial") or {}
+    career = data.get("career") or {}
+    emotional = data.get("emotional") or {}
+    focus = data.get("focus") or {}
+    life_events = data.get("life_events") or {}
+    calibration = data.get("calibration") or {}
+    identity = intake_context.get("identity") or data.get("identity") or {}
+    birth_details = intake_context.get("birth_details") or data.get("birth_details") or {}
+    contact = intake_context.get("contact") or data.get("contact") or {}
+
+    date_of_birth = birth_details.get("date_of_birth") or identity.get("date_of_birth")
+    pyth = numerology_core.get("pythagorean") or {}
+    chaldean = numerology_core.get("chaldean") or {}
+    mobile_analysis = numerology_core.get("mobile_analysis") or {}
+    email_analysis = numerology_core.get("email_analysis") or {}
+    loshu_signals = _extract_loshu_signals(numerology_core)
+
+    mulank = _derive_mulank(date_of_birth)
+    bhagyank = pyth.get("life_path_number")
+    personal_year = _derive_personal_year(date_of_birth)
+
+    decision_confusion = emotional.get("decision_confusion")
+    impulse_control = emotional.get("impulse_control")
+
+    decision_clarity = None
+    if decision_confusion is not None:
+        decision_clarity = max(1, min(10, 11 - int(decision_confusion)))
+
+    impulse_spending = None
+    if impulse_control is not None:
+        impulse_spending = max(1, min(10, 11 - int(impulse_control)))
+
+    setbacks = life_events.get("setback_events_years")
+    major_setbacks = len(setbacks) if isinstance(setbacks, list) else None
+
+    return {
+        "full_name": identity.get("full_name"),
+        "date_of_birth": date_of_birth,
+        "gender": identity.get("gender"),
+        "birthplace_city": birth_details.get("birthplace_city"),
+        "mobile_number": contact.get("mobile_number") or identity.get("mobile_number"),
+        "email": identity.get("email"),
+        "current_problem": data.get("current_problem"),
+
+        "monthly_income": financial.get("monthly_income"),
+        "savings_ratio": financial.get("savings_ratio"),
+        "debt_ratio": financial.get("debt_ratio"),
+        "risk_tolerance": financial.get("risk_tolerance"),
+        "impulse_spending": impulse_spending,
+
+        "industry": career.get("industry"),
+        "role": career.get("role"),
+        "years_experience": career.get("years_experience"),
+        "stress_level": career.get("stress_level"),
+
+        "anxiety": emotional.get("anxiety_level"),
+        "decision_confusion": decision_confusion,
+        "decision_clarity": decision_clarity,
+        "impulse_control": impulse_control,
+        "emotional_stability": emotional.get("emotional_stability"),
+
+        "life_focus": focus.get("life_focus"),
+        "major_setbacks": major_setbacks,
+
+        "stress_response": calibration.get("stress_response"),
+        "money_decision_style": calibration.get("money_decision_style"),
+        "biggest_weakness": calibration.get("biggest_weakness"),
+        "life_preference": calibration.get("life_preference"),
+        "decision_style": calibration.get("decision_style"),
+
+        "mulank": mulank,
+        "bhagyank": bhagyank,
+        "life_path_number": bhagyank,
+        "destiny_number": pyth.get("destiny_number"),
+        "expression_number": pyth.get("expression_number"),
+        "name_number": chaldean.get("name_number"),
+        "personal_year": personal_year,
+        "mobile_vibration": mobile_analysis.get("mobile_vibration") or mobile_analysis.get("mobile_number_vibration"),
+        "email_vibration": email_analysis.get("email_number"),
+        "lo_shu_present_digits": loshu_signals["lo_shu_present_digits"],
+        "lo_shu_missing_digits": loshu_signals["lo_shu_missing_digits"],
+        "repeating_digits": loshu_signals["repeating_digits"],
+    }
+
+
+# =====================================================
+# AI QUALITY + MERGE HELPERS
+# =====================================================
+
+
+def _looks_usable_text(value: Any) -> bool:
+    text = " ".join(str(value or "").split())
+    if len(text) < 24:
+        return False
+    if any(token in text for token in ("{", "}", "Ã Â¤", "Ã Â¥", "à¤", "à¥", "�", "[]")):
+        return False
+    if re.search(r"(,\s*,)|(।\s*।)|(^[-,:;|]+$)", text):
+        return False
+    return True
+
+
+def _merge_narrative(base: Any, override: Any) -> Any:
+    if isinstance(base, dict):
+        merged = dict(base)
+        override = override if isinstance(override, dict) else {}
+        for key, value in merged.items():
+            merged[key] = _merge_narrative(value, override.get(key))
+        for key, value in override.items():
+            if key not in merged:
+                if isinstance(value, str) and _looks_usable_text(value):
+                    merged[key] = value
+                elif isinstance(value, list) and value:
+                    merged[key] = value
+                elif isinstance(value, dict):
+                    merged[key] = value
+        return merged
+
+    if isinstance(base, list):
+        if isinstance(override, list) and override:
+            cleaned = [item for item in override if not isinstance(item, str) or _looks_usable_text(item)]
+            if cleaned:
+                return cleaned
+        return base
+
+    if isinstance(base, str):
+        if isinstance(override, str) and _looks_usable_text(override):
+            return override
+        return base
+
+    return override if override not in (None, "", [], {}) else base
+
+
+# =====================================================
+# SAFE AI WRAPPER
+# Guarantees structure even if LLM fails
+# =====================================================
+
+
+def safe_generate_ai_narrative(
+    numerology_core,
+    scores,
+    current_problem,
+    plan_name,
+    token_multiplier,
+    intake_context,
+    interpretation_draft,
+):
+    baseline = interpretation_draft or _build_personalized_fallback(
+        intake_context=intake_context,
+        numerology_core=numerology_core,
+        scores=scores,
+        current_problem=current_problem,
+    )
+
+    try:
+        ai_sections = generate_ai_narrative(
+            numerology_core=numerology_core,
+            scores=scores,
+            current_problem=current_problem,
+            plan_name=plan_name,
+            token_multiplier=token_multiplier,
+            intake_context=intake_context,
+            interpretation_draft=baseline,
+        )
+        if isinstance(ai_sections, dict) and ai_sections:
+            merged = _merge_narrative(baseline, ai_sections)
+            merged["_fallback_used"] = False
+            return merged
+        raise ValueError("AI returned invalid structure")
+    except Exception:
+        traceback.print_exc()
+        baseline["_fallback_used"] = True
+        return baseline
+
+
+# =====================================================
+# MASTER REPORT GENERATOR
+# =====================================================
+
+
+def generate_life_signify_report(
+    request_data: Dict[str, Any],
+    plan_name: str = "basic",
+) -> Dict[str, Any]:
+
+    plan_name = (plan_name or "basic").lower()
+
+    features = PLAN_FEATURES.get(plan_name, PLAN_FEATURES["basic"])
+
+    intake_context = _build_intake_context(request_data)
+    identity = intake_context.get("identity") or {}
+    birth_details = intake_context.get("birth_details") or {}
+    current_problem = intake_context.get("current_problem")
+
+    # -------------------------------------------------
+    # NUMEROLOGY CORE ENGINE
+    # -------------------------------------------------
+
+    numerology_core = generate_numerology_profile(
+        identity=identity,
+        birth_details=birth_details,
+        plan_name=plan_name,
+    ) or {}
+
+    # -------------------------------------------------
+    # BUSINESS NUMBER ENGINE
+    # -------------------------------------------------
+
+    try:
+        business_signals = analyze_business_name(
+            identity.get("business_name")
+        )
+    except Exception:
+        traceback.print_exc()
+        business_signals = {}
+
+    numerology_core["business_analysis"] = business_signals
+
+    # -------------------------------------------------
+    # BEHAVIORAL SCORING ENGINE
+    # -------------------------------------------------
+
+    flat_data = flatten_input(
+        request_data,
+        numerology_core=numerology_core,
+        intake_context=intake_context,
+    )
+
+    scores = generate_score_summary(flat_data, plan_name=plan_name) or {}
+
+    # -------------------------------------------------
+    # ARCHETYPE ENGINE
+    # -------------------------------------------------
+
+    archetype = generate_numerology_archetype(
+        numerology_core,
+        scores
+    )
+
+    # -------------------------------------------------
+    # REMEDY ENGINE
+    # -------------------------------------------------
+
+    remedies = generate_remedy_protocol(
+        numerology_core,
+        scores=scores,
+    )
+
+    # -------------------------------------------------
+    # INTERPRETATION ENGINE
+    # -------------------------------------------------
+
+    interpretation_draft = build_interpretation_report(
+        intake_context=intake_context,
+        numerology_core=numerology_core,
+        scores=scores,
+        archetype=archetype,
+        remedies=remedies,
+        plan_name=plan_name,
+    )
+
+    # -------------------------------------------------
+    # AI NARRATIVE
+    # -------------------------------------------------
+
+    ai_sections = safe_generate_ai_narrative(
+        numerology_core=numerology_core,
+        scores=scores,
+        current_problem=current_problem,
+        plan_name=plan_name,
+        token_multiplier=features["token_multiplier"],
+        intake_context=intake_context,
+        interpretation_draft=interpretation_draft,
+    )
+
+    # -------------------------------------------------
+    # RADAR CHART DATA
+    # -------------------------------------------------
+
+    radar_chart_data = {
+        "Life Stability": scores.get("life_stability_index", 50),
+        "Decision Clarity": scores.get("confidence_score", 50),
+        "Dharma Alignment": scores.get("dharma_alignment_score", 50),
+        "Emotional Regulation": scores.get("emotional_regulation_index", 50),
+        "Financial Discipline": scores.get("financial_discipline_index", 50),
+        "Karma Pressure": scores.get("karma_pressure_index", 50),
+    }
+
+    # -------------------------------------------------
+    # FINAL REPORT JSON
+    # -------------------------------------------------
+
+    report_output = {
+
+        "meta": {
+            "report_version": "6.0",
+            "engine_version": settings.ENGINE_VERSION,
+            "plan_tier": plan_name,
+            "generated_at": datetime.utcnow().isoformat(),
+            "used_fallback_narrative": ai_sections.get("_fallback_used", False),
+        },
+
+        "identity": identity,
+
+        "birth_details": birth_details,
+
+        "focus": intake_context.get("focus") or {},
+
+        "preferences": intake_context.get("preferences") or {},
+
+        "current_problem": current_problem,
+
+        "core_metrics": scores,
+
+        "metric_explanations": ai_sections.get("metric_explanations"),
+
+        "metrics_spine": ai_sections.get("metrics_spine"),
+
+        "numerology_core": numerology_core,
+
+        "executive_brief": ai_sections.get("executive_brief"),
+
+        "analysis_sections": ai_sections.get("analysis_sections"),
+
+        "primary_insight": ai_sections.get("primary_insight"),
+
+        "numerology_architecture": ai_sections.get("numerology_architecture"),
+
+        "archetype_intelligence": ai_sections.get("archetype_intelligence"),
+
+        "loshu_diagnostic": ai_sections.get("loshu_diagnostic"),
+
+        "planetary_mapping": ai_sections.get("planetary_mapping"),
+
+        "structural_deficit_model": ai_sections.get("structural_deficit_model"),
+
+        "circadian_alignment": ai_sections.get("circadian_alignment"),
+
+        "environment_alignment": ai_sections.get("environment_alignment"),
+
+        "vedic_remedy_protocol": ai_sections.get("vedic_remedy_protocol"),
+
+        "execution_plan": ai_sections.get("execution_plan"),
+
+        "strategic_guidance": ai_sections.get("strategic_guidance"),
+
+        "growth_blueprint": ai_sections.get("growth_blueprint"),
+
+        "personal_year_forecast": ai_sections.get("personal_year_forecast"),
+
+        "name_vibration_optimization": ai_sections.get("name_vibration_optimization"),
+
+        "mobile_number_intelligence": ai_sections.get("mobile_number_intelligence"),
+
+        "email_identity_intelligence": ai_sections.get("email_identity_intelligence"),
+
+        "signature_intelligence": ai_sections.get("signature_intelligence"),
+
+        "business_name_intelligence": ai_sections.get("business_name_intelligence"),
+
+        "brand_handle_optimization": ai_sections.get("brand_handle_optimization"),
+
+        "residence_energy_intelligence": ai_sections.get("residence_energy_intelligence"),
+
+        "vehicle_number_intelligence": ai_sections.get("vehicle_number_intelligence"),
+
+        "correction_protocol_summary": ai_sections.get("correction_protocol_summary"),
+
+        "karmic_pattern_intelligence": ai_sections.get("karmic_pattern_intelligence"),
+
+        "hidden_talent_intelligence": ai_sections.get("hidden_talent_intelligence"),
+
+        "pinnacle_challenge_cycle_intelligence": ai_sections.get("pinnacle_challenge_cycle_intelligence"),
+
+        "life_cycle_timeline": ai_sections.get("life_cycle_timeline"),
+
+        "strategic_timing_intelligence": ai_sections.get("strategic_timing_intelligence"),
+
+        "wealth_energy_blueprint": ai_sections.get("wealth_energy_blueprint"),
+
+        "leadership_intelligence": ai_sections.get("leadership_intelligence"),
+
+        "decision_intelligence": ai_sections.get("decision_intelligence"),
+
+        "emotional_intelligence": ai_sections.get("emotional_intelligence"),
+
+        "digital_discipline": ai_sections.get("digital_discipline"),
+
+        "lifestyle_alignment": ai_sections.get("lifestyle_alignment"),
+
+        "vedic_remedy": ai_sections.get("vedic_remedy"),
+
+        "closing_synthesis": ai_sections.get("closing_synthesis"),
+
+        "business_block": ai_sections.get("business_block"),
+
+        "compatibility_block": ai_sections.get("compatibility_block"),
+
+        "radar_chart_data": radar_chart_data,
+
+        "lifestyle_remedies": remedies.get("lifestyle_remedies"),
+
+        "mobile_remedies": remedies.get("mobile_remedies"),
+
+        "vedic_remedies": remedies.get("vedic_remedies"),
+
+        "daily_energy_alignment": remedies.get("daily_energy_alignment"),
+
+        "numerology_archetype": archetype,
+
+        "section_payloads": ai_sections.get("section_payloads"),
+
+        "disclaimer": {
+            "framework": "Tiered Numerology Intelligence System",
+            "confidence_score": scores.get("data_completeness_score", 0),
+            "note": "Insights are probabilistic and strategic, not deterministic predictions.",
+        },
+    }
+
+    return report_output
+
+
+
+

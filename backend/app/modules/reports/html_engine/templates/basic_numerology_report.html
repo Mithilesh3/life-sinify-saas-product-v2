@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ cover.title }}</title>
+  <style>
+    {% if assets.deva_font_regular %}
+    @font-face {
+      font-family: "Noto Sans Devanagari";
+      src: url("{{ assets.deva_font_regular }}") format("truetype");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    {% endif %}
+    {% if assets.deva_font_bold %}
+    @font-face {
+      font-family: "Noto Sans Devanagari";
+      src: url("{{ assets.deva_font_bold }}") format("truetype");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
+    {% endif %}
+
+    :root {
+      --paper: #F6F1E7;
+      --paper-2: #F6F1E7;
+      --ink: #3B2B1A;
+      --ink-soft: #A87C2A;
+      --gold: #C79A3B;
+      --gold-soft: rgba(199, 154, 59, 0.14);
+      --line: #D6B36A;
+      --panel: #FFFDF8;
+      --panel-2: #FFFDF8;
+      --accent-gradient: linear-gradient(135deg,#CFAF63,#A87C2A);
+      --topbar-gradient: linear-gradient(90deg,#CFAF63,#A87C2A);
+      --card-shadow: 0 6px 14px rgba(0,0,0,0.06);
+      --icon-lotus: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%23C79A3B%27%20stroke-width%3D%271.7%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M12%204.7c1.4%202%201.4%204.1%200%206.2-1.4-2.1-1.4-4.2%200-6.2Z%27%2F%3E%3Cpath%20d%3D%27M6%209.2c2.2.3%204%201.5%206%204-2.4-.2-4.4-.8-6-4Z%27%2F%3E%3Cpath%20d%3D%27M18%209.2c-2.2.3-4%201.5-6%204%202.4-.2%204.4-.8%206-4Z%27%2F%3E%3Cpath%20d%3D%27M4.5%2015.7c2.6-.4%205%20.2%207.5%202%202.5-1.8%204.9-2.4%207.5-2%27%2F%3E%3C%2Fsvg%3E");
+      --icon-yantra: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%23C79A3B%27%20stroke-width%3D%271.5%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%278.4%27%2F%3E%3Cpath%20d%3D%27M12%206.2%2017.4%2016H6.6Z%27%2F%3E%3Cpath%20d%3D%27M12%2017.8%206.6%208h10.8Z%27%2F%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%271.7%27%2F%3E%3C%2Fsvg%3E");
+      --icon-sun: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%23C79A3B%27%20stroke-width%3D%271.6%27%20stroke-linecap%3D%27round%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%274.2%27%2F%3E%3Cpath%20d%3D%27M12%202.6v3M12%2018.4v3M2.6%2012h3M18.4%2012h3M5.5%205.5l2.1%202.1M16.4%2016.4l2.1%202.1M18.5%205.5l-2.1%202.1M7.6%2016.4l-2.1%202.1%27%2F%3E%3C%2Fsvg%3E");
+      --icon-moon: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%23C79A3B%27%20stroke-width%3D%271.7%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M15.8%203.5a8.6%208.6%200%201%200%204.7%2015.4A9%209%200%200%201%2015.8%203.5Z%27%2F%3E%3Ccircle%20cx%3D%278.2%27%20cy%3D%278.7%27%20r%3D%271%27%20fill%3D%27%23C79A3B%27%20stroke%3D%27none%27%2F%3E%3C%2Fsvg%3E");
+      --icon-mandala: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%23C79A3B%27%20stroke-width%3D%271.4%27%20stroke-linecap%3D%27round%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%277.8%27%2F%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%274.4%27%2F%3E%3Cpath%20d%3D%27M12%202.7v18.6M2.7%2012h18.6M5.2%205.2l13.6%2013.6M18.8%205.2%205.2%2018.8%27%2F%3E%3C%2Fsvg%3E");
+      --icon-chakra: url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2024%2024%27%20fill%3D%27none%27%20stroke%3D%27%23C79A3B%27%20stroke-width%3D%271.4%27%20stroke-linecap%3D%27round%27%20stroke-linejoin%3D%27round%27%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%278.1%27%2F%3E%3Ccircle%20cx%3D%2712%27%20cy%3D%2712%27%20r%3D%272.2%27%2F%3E%3Cpath%20d%3D%27M12%203.9V8M12%2016v4.1M3.9%2012H8M16%2012h4.1M5.5%205.5l2.9%202.9M15.6%2015.6l2.9%202.9M18.5%205.5l-2.9%202.9M8.4%2015.6l-2.9%202.9%27%2F%3E%3C%2Fsvg%3E");
+      --radius: 13px;
+      --box-label-size: 16.8px;
+      --box-body-size: 16.8px;
+      --box-body-line-height: 1.36;
+      --box-pad-x: 10px;
+      --box-pad-top: 8px;
+      --box-pad-bottom: 6px;
+      --box-label-gap: 5px;
+      --box-four-gap: 2.2em;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: "Noto Sans Devanagari", "Inter", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      line-height: 1.55;
+      font-size: 13px;
+    }
+
+    @page { size: A4; margin: 0; }
+
+    .report-shell {
+      width: 210mm;
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    .page {
+      position: relative;
+      width: 210mm;
+      min-height: 297mm;
+      padding: 12mm 12mm 10mm;
+      background:
+        radial-gradient(circle at 14% 10%, rgba(207, 175, 99, 0.08), transparent 34%),
+        radial-gradient(circle at 86% 88%, rgba(168, 124, 42, 0.06), transparent 36%),
+        linear-gradient(180deg, var(--paper), var(--paper-2));
+      page-break-after: always;
+      overflow: hidden;
+    }
+
+    .page::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle at 16% 18%, rgba(207, 175, 99, 0.07), transparent 40%),
+        radial-gradient(circle at 84% 82%, rgba(168, 124, 42, 0.05), transparent 42%);
+      background-repeat: no-repeat, no-repeat;
+      background-position: center center, center center;
+      background-size: cover, cover;
+      opacity: 0.045;
+      pointer-events: none;
+      z-index: 0;
+    }
+    {% if assets.mandala_bg_uri %}
+    .cover::before {
+      background-image:
+        url("{{ assets.mandala_bg_uri }}"),
+        radial-gradient(circle at 50% 42%, rgba(199, 154, 59, 0.13), transparent 62%),
+        radial-gradient(circle at 84% 82%, rgba(168, 124, 42, 0.05), transparent 44%);
+      background-repeat: no-repeat, no-repeat, no-repeat;
+      background-position: center center, center center, center center;
+      background-size: 100% auto, cover, cover;
+      opacity: 0.05;
+    }
+    {% endif %}
+
+    .page::after {
+      content: "";
+      position: absolute;
+      inset: 6mm;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .layer {
+      position: relative;
+      z-index: 2;
+    }
+    .page > .layer::before {
+      content: "";
+      position: absolute;
+      top: -6mm;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: 999px;
+      background: var(--topbar-gradient);
+      pointer-events: none;
+    }
+
+    .watermark {
+      position: absolute;
+      right: 10mm;
+      bottom: 8mm;
+      z-index: 3;
+      font-size: 10px;
+      color: rgba(168, 124, 42, 0.78);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .cover {
+      padding-top: 16mm;
+    }
+    .cover-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18mm;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      color: var(--ink-soft);
+      letter-spacing: 0.03em;
+    }
+    .brand img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 12px;
+      background: var(--accent-gradient);
+      color: #FFFDF8;
+      font-size: 11px;
+      box-shadow: var(--card-shadow);
+    }
+    .image-shell {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: rgba(199, 154, 59, 0.12);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .image-shell img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .image-shell--brand {
+      width: 28px;
+      height: 28px;
+    }
+    .image-shell--icon {
+      width: 25px;
+      height: 25px;
+    }
+    .image-shell--meta {
+      width: 22px;
+      height: 22px;
+    }
+    .image-fallback {
+      font-size: 11px;
+      color: #7b5d22;
+      line-height: 1;
+      font-weight: 700;
+      padding-top: 1px;
+    }
+    .image-fallback.hidden {
+      display: none;
+    }
+    .cover-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 14px;
+      align-items: start;
+    }
+    .cover h1 {
+      margin: 0;
+      color: #4a3512;
+      font-size: 32px;
+      line-height: 1.18;
+    }
+    .cover-sub {
+      margin: 10px 0 0;
+      color: #6c562a;
+      font-size: 15.8px;
+      line-height: 1.5;
+    }
+    .identity {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+    .identity .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 9px 10px;
+      min-height: 60px;
+      box-shadow: var(--card-shadow);
+    }
+    .identity .card h4 {
+      margin: 0 0 5px;
+      color: var(--gold);
+      font-size: 11.4px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .identity .card p {
+      margin: 0;
+      font-size: 14.6px;
+      line-height: 1.4;
+      color: #4a3512;
+      font-weight: 700;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+
+    .cover-art {
+      display: grid;
+      justify-items: center;
+      gap: 7px;
+    }
+    .cover-art img.main {
+      width: 120px;
+      max-height: 150px;
+      object-fit: contain;
+      object-position: center;
+      transform: scale(1.12);
+      transform-origin: center;
+    }
+    .cover-art img.secondary {
+      width: 108px;
+      max-height: 130px;
+      object-fit: contain;
+      object-position: center;
+      transform: scale(1.12);
+      transform-origin: center;
+      opacity: 0.86;
+    }
+    .cover-bottom-art {
+      position: absolute;
+      left: 50%;
+      bottom: 63mm;
+      transform: translateX(-50%);
+      width: 158mm;
+      height: 112mm;
+      z-index: 1;
+      pointer-events: none;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .cover-bottom-art img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      opacity: 0.9;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 9px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--line);
+    }
+    .kicker {
+      margin: 0;
+      color: var(--gold);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      line-height: 1.3;
+    }
+    .title {
+      margin: 3px 0 0;
+      font-size: 24px;
+      color: var(--ink);
+      font-weight: 800;
+      line-height: 1.2;
+    }
+    .page-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #6f592c;
+      font-size: 11.6px;
+      line-height: 1.35;
+    }
+    .page-meta img {
+      width: 23px;
+      height: 23px;
+      object-fit: contain;
+    }
+
+    .section-shell {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      margin-top: 8px;
+      min-height: 252mm;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: var(--card-shadow);
+    }
+    .section-shell--executive {
+      min-height: 238mm;
+    }
+    .section-shell--executive .metrics-wrap {
+      gap: 7px;
+    }
+    .section-shell--executive .spine {
+      font-size: 10px;
+      padding: 6px 7px;
+    }
+    .section-shell--executive .spine p {
+      margin-bottom: 2px;
+      line-height: 1.3;
+    }
+    .section-top {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px;
+      align-items: center;
+      position: relative;
+      margin-bottom: 4px;
+      padding-bottom: 12px;
+    }
+    .section-top::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 2px;
+      background: var(--line);
+      opacity: 0.9;
+    }
+    .section-top .image-shell--icon {
+      display: none;
+    }
+    .section-title {
+      margin: 0;
+      color: var(--ink);
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.3;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      --section-icon: var(--icon-lotus);
+    }
+    .section-title::before {
+      content: "";
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      background-image: var(--section-icon);
+      background-repeat: no-repeat;
+      background-size: 18px 18px;
+      background-position: center;
+      transform: translateY(1px);
+    }
+    .page:not(.cover):nth-of-type(6n + 2) .section-title { --section-icon: var(--icon-lotus); }
+    .page:not(.cover):nth-of-type(6n + 3) .section-title { --section-icon: var(--icon-yantra); }
+    .page:not(.cover):nth-of-type(6n + 4) .section-title { --section-icon: var(--icon-sun); }
+    .page:not(.cover):nth-of-type(6n + 5) .section-title { --section-icon: var(--icon-moon); }
+    .page:not(.cover):nth-of-type(6n + 6) .section-title { --section-icon: var(--icon-mandala); }
+    .page:not(.cover):nth-of-type(6n + 7) .section-title { --section-icon: var(--icon-chakra); }
+    .page-meta .image-shell {
+      background: var(--accent-gradient);
+      border-color: var(--line);
+    }
+    .narrative {
+      margin: 0;
+      color: #4f3b1b;
+      font-size: 14.6px;
+      line-height: 1.62;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+    }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+      align-content: stretch;
+      grid-auto-rows: minmax(84px, 1fr);
+      flex: 1 1 auto;
+    }
+    .cards > .mini:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+    .mini {
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: var(--box-pad-top) var(--box-pad-x) var(--box-pad-bottom);
+      min-height: 72px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      box-shadow: var(--card-shadow);
+    }
+    .mini h5 {
+      margin: 0 0 var(--box-label-gap);
+      font-size: var(--box-label-size);
+      font-weight: 700;
+      color: #34230e;
+      letter-spacing: 0.02em;
+      line-height: 1.3;
+    }
+    .mini p {
+      margin: 0;
+      font-size: var(--box-body-size);
+      color: #49361a;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      line-height: var(--box-body-line-height);
+      text-wrap: pretty;
+    }
+    .cards--four .mini {
+      padding-top: 9px;
+      padding-bottom: 8px;
+    }
+    .cards--four .mini p {
+      margin-top: var(--box-four-gap);
+    }
+    .cards--four .mini--tight p {
+      margin-top: 1.55em;
+    }
+    .cards--four .mini--dense p {
+      margin-top: 1.35em;
+    }
+    .cards--core-align {
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      align-content: stretch;
+      align-items: stretch;
+      gap: 9px;
+    }
+    .cards--core-align .mini {
+      height: 100%;
+      min-height: 0;
+      box-sizing: border-box;
+    }
+    .mini--tight,
+    .mini--dense {
+      justify-content: flex-start;
+      padding-top: 8px;
+      padding-bottom: 5px;
+    }
+    .mini--tight h5 {
+      font-size: 16px;
+    }
+    .mini--tight p {
+      font-size: 15.8px;
+      line-height: 1.33;
+    }
+    .mini--dense h5 {
+      font-size: 15.4px;
+    }
+    .mini--dense p {
+      font-size: 15.2px;
+      line-height: 1.31;
+    }
+    .bullets {
+      margin: 0;
+      padding-left: 16px;
+      color: #4b3a1d;
+      font-size: 12.3px;
+      line-height: 1.52;
+    }
+    .bullets li { margin-bottom: 4px; }
+
+    .diagram {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 7px;
+      max-height: 170px;
+      overflow: hidden;
+      margin-top: auto;
+      box-shadow: var(--card-shadow);
+    }
+    .diagram svg {
+      width: 100%;
+      height: auto;
+      max-height: 152px;
+      display: block;
+    }
+
+    .metrics-wrap {
+      display: grid;
+      grid-template-columns: 0.9fr 1.1fr;
+      gap: 9px;
+    }
+    .metrics-left, .metrics-right {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      padding: 8px;
+      box-shadow: var(--card-shadow);
+    }
+    .metrics-left canvas {
+      width: 100% !important;
+      height: 205px !important;
+    }
+    .section-shell--executive .metrics-left canvas {
+      height: 182px !important;
+    }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+    .metric-item {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 6px;
+      background: var(--panel);
+      box-shadow: var(--card-shadow);
+    }
+    .metric-item h5 {
+      margin: 0;
+      font-size: 11.1px;
+      line-height: 1.35;
+      color: #8b651f;
+    }
+    .metric-item .value {
+      margin-top: 4px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #FFFDF8;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 42px;
+      padding: 3px 11px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--accent-gradient);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    }
+    .spine {
+      margin-top: 8px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 8px 9px;
+      background: rgba(199, 154, 59, 0.12);
+      font-size: 12.3px;
+      line-height: 1.52;
+      color: var(--ink);
+      box-shadow: var(--card-shadow);
+    }
+    .spine p { margin: 0 0 5px; }
+    .spine p:last-child { margin-bottom: 0; }
+
+    @media screen and (max-width: 1200px) {
+      .report-shell {
+        width: 100%;
+      }
+      .page {
+        width: 100%;
+      }
+    }
+
+    @media screen and (max-width: 920px) {
+      .cover-grid {
+        grid-template-columns: 1fr;
+      }
+      .metrics-wrap,
+      .cards,
+      .metric-grid,
+      .identity {
+        grid-template-columns: 1fr;
+      }
+      .section-shell {
+        min-height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="report-shell">
+    <section class="page cover">
+      <div class="layer">
+        <div class="cover-top">
+          <div class="brand">
+            <span class="image-shell image-shell--brand" aria-hidden="true">
+              {% if assets.brand_logo_uri %}
+              <img
+                src="{{ assets.brand_logo_uri }}"
+                alt="NumAI logo"
+                loading="eager"
+                onerror="window.__numaiImageFallback(this)"
+              />
+              {% endif %}
+              <span class="image-fallback{% if assets.brand_logo_uri %} hidden{% endif %}">N</span>
+            </span>
+            <span>Life Signify NumAI</span>
+          </div>
+          <span class="pill">{{ meta.plan }} • {{ meta.report_date }}</span>
+        </div>
+
+        <div class="cover-grid">
+          <div>
+            <h1>{{ cover.title }}</h1>
+            <p class="cover-sub">{{ cover.subtitle }}</p>
+
+            <div class="identity">
+              <div class="card"><h4>क्लाइंट | Client</h4><p>{{ cover.name }}</p></div>
+              <div class="card"><h4>जन्म तिथि | DOB</h4><p>{{ cover.dob }}</p></div>
+              <div class="card"><h4>रिस्क बैंड | Risk</h4><p>{{ cover.risk_band }}</p></div>
+              <div class="card"><h4>सेक्शंस | Sections</h4><p>{{ report.report_blueprint.section_count if report.report_blueprint else meta.section_count }}</p></div>
+            </div>
+          </div>
+
+          <div class="cover-art">
+            <span class="image-shell" style="width:120px;height:150px;" aria-hidden="true">
+              {% if assets.cover_ganesha_uri %}
+              <img
+                class="main"
+                src="{{ assets.cover_ganesha_uri }}"
+                alt="Ganesha"
+                loading="eager"
+                onerror="window.__numaiImageFallback(this)"
+              />
+              {% endif %}
+              <span class="image-fallback{% if assets.cover_ganesha_uri %} hidden{% endif %}">ॐ</span>
+            </span>
+            <span class="image-shell" style="width:108px;height:130px;" aria-hidden="true">
+              {% if assets.cover_krishna_uri %}
+              <img
+                class="secondary"
+                src="{{ assets.cover_krishna_uri }}"
+                alt="Krishna"
+                loading="eager"
+                onerror="window.__numaiImageFallback(this)"
+              />
+              {% endif %}
+              <span class="image-fallback{% if assets.cover_krishna_uri %} hidden{% endif %}">✶</span>
+            </span>
+          </div>
+        </div>
+
+      </div>
+      {% if assets.cover_ganesh_yantra_uri %}
+      <div class="cover-bottom-art" aria-hidden="true">
+        <img
+          src="{{ assets.cover_ganesh_yantra_uri }}"
+          alt="Ganesh Yantra"
+          loading="eager"
+          onerror="window.__numaiImageFallback(this)"
+        />
+      </div>
+      {% endif %}
+      {% if watermark %}<div class="watermark">Preview</div>{% endif %}
+    </section>
+
+    {% for page in basic_report.section_pages %}
+    {% set section = page.section %}
+    <section class="page">
+      <div class="layer">
+        <header class="header">
+          <div>
+            <p class="kicker">Basic Numerology Section</p>
+            <h2 class="title">{{ section.title }}</h2>
+          </div>
+          <div class="page-meta">
+            <span class="image-shell image-shell--meta" aria-hidden="true">
+              {% if assets.lotus_gold_uri %}
+              <img
+                src="{{ assets.lotus_gold_uri }}"
+                alt="Lotus icon"
+                loading="eager"
+                onerror="window.__numaiImageFallback(this)"
+              />
+              {% endif %}
+              <span class="image-fallback{% if assets.lotus_gold_uri %} hidden{% endif %}">❋</span>
+            </span>
+            <span>Page {{ page.page_number }} / {{ basic_report.total_pages }}</span>
+          </div>
+        </header>
+
+        <article class="section-shell{% if section.key == 'executive_numerology_summary' %} section-shell--executive{% endif %}">
+          <div class="section-top">
+            <span class="image-shell image-shell--icon" aria-hidden="true">
+              {% if section.icon_uri %}
+              <img
+                src="{{ section.icon_uri }}"
+                alt="Section icon"
+                loading="eager"
+                onerror="window.__numaiImageFallback(this)"
+              />
+              {% endif %}
+              <span class="image-fallback{% if section.icon_uri %} hidden{% endif %}">◎</span>
+            </span>
+            <h3 class="section-title">{{ section.title }}</h3>
+          </div>
+
+          <p class="narrative">{{ section.narrative }}</p>
+
+          {% if section.key == "executive_numerology_summary" %}
+          <div class="metrics-wrap">
+            <div class="metrics-left">
+              <canvas id="radarChart"></canvas>
+            </div>
+            <div class="metrics-right">
+              <div class="metric-grid">
+                {% for metric in metrics.rows %}
+                <div class="metric-item">
+                  <h5>{{ metric.label }}</h5>
+                  <div class="value">{{ metric.value }}</div>
+                </div>
+                {% endfor %}
+              </div>
+              <div class="spine">
+                <p><strong>मुख्य ताकत:</strong> {{ metrics.spine.primary_strength }}</p>
+                <p><strong>मुख्य चुनौती:</strong> {{ metrics.spine.primary_deficit }}</p>
+                <p><strong>संरचनात्मक कारण:</strong> {{ metrics.spine.structural_cause }}</p>
+                <p><strong>Correction Focus:</strong> {{ metrics.spine.intervention_focus }}</p>
+                <p><strong>Risk Band:</strong> {{ metrics.risk_band }}</p>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if section.cards %}
+          <div class="cards{% if section.cards|length == 4 and section.key != 'executive_numerology_summary' %} cards--four{% endif %}{% if section.key == 'core_numbers_analysis' %} cards--core-align{% endif %}">
+            {% for card in section.cards %}
+            {% set card_text_len = (card.value | default('') | length) %}
+            {% set mini_class = "mini" %}
+            {% if card_text_len > 640 %}
+            {% set mini_class = "mini mini--dense" %}
+            {% elif card_text_len > 520 %}
+            {% set mini_class = "mini mini--tight" %}
+            {% endif %}
+            <div class="{{ mini_class }}">
+              <h5>{{ card.label }}</h5>
+              <p>{{ card.value }}</p>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          {% if section.bullets %}
+          <ul class="bullets">
+            {% for bullet in section.bullets %}
+            <li>{{ bullet }}</li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+
+          {% if section.diagram_svg %}
+          <div class="diagram">{{ section.diagram_svg | safe }}</div>
+          {% endif %}
+        </article>
+      </div>
+      {% if watermark %}<div class="watermark">Preview</div>{% endif %}
+    </section>
+    {% endfor %}
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script>
+    window.__numaiImageFallback = function (img) {
+      if (!img) {
+        return;
+      }
+      img.style.display = "none";
+      const fallback = img.parentElement
+        ? img.parentElement.querySelector(".image-fallback")
+        : null;
+      if (fallback) {
+        fallback.classList.remove("hidden");
+      }
+    };
+
+    window.__numaiReady = false;
+    (function renderRadarChart() {
+      const canvas = document.getElementById("radarChart");
+      if (!canvas) {
+        window.__numaiReady = true;
+        return;
+      }
+
+      const labels = {{ metrics.radar_labels_json | safe }};
+      const values = {{ metrics.radar_values_json | safe }};
+      const ctx = canvas.getContext("2d");
+
+      if (window.Chart) {
+        new Chart(ctx, {
+          type: "radar",
+          data: {
+            labels,
+            datasets: [{
+              data: values,
+              label: "Numerology Metrics",
+              borderColor: "#b88a2d",
+              backgroundColor: "rgba(184, 138, 45, 0.22)",
+              borderWidth: 2,
+              pointRadius: 2.2,
+              pointBackgroundColor: "#fdf5e3",
+              pointBorderColor: "#a9781d"
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              r: {
+                min: 0,
+                max: 100,
+                ticks: {
+                  stepSize: 20,
+                  color: "#7a6027",
+                  backdropColor: "transparent"
+                },
+                angleLines: { color: "rgba(122, 96, 39, 0.25)" },
+                grid: { color: "rgba(122, 96, 39, 0.25)" },
+                pointLabels: { color: "#5a4520", font: { size: 10 } }
+              }
+            }
+          }
+        });
+      } else {
+        ctx.fillStyle = "#6c5526";
+        ctx.font = "14px sans-serif";
+        ctx.fillText("Chart.js unavailable", 14, 24);
+      }
+      window.__numaiReady = true;
+    })();
+  </script>
+</body>
+</html>
