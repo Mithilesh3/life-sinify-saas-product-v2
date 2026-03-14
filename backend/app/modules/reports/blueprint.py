@@ -1,0 +1,183 @@
+from typing import Dict, List
+
+SECTION_TITLES: Dict[str, str] = {
+    "executive_numerology_summary": "कार्यकारी अंक सारांश | Executive Numerology Summary",
+    "core_numbers_analysis": "मूल अंक विश्लेषण | Core Numbers Analysis",
+    "mulank_description": "मूलांक विवरण | Mulank Description",
+    "bhagyank_description": "भाग्यांक विवरण | Bhagyank Description",
+    "executive_summary": "Executive Strategic Intelligence Summary",
+    "core_numerology_numbers": "Core Numerology Numbers",
+    "number_interaction_analysis": "अंक अंतःक्रिया विश्लेषण | Number Interaction Analysis",
+    "loshu_grid_interpretation": "लो शू ग्रिड व्याख्या | Lo Shu Grid Interpretation",
+    "missing_numbers_analysis": "अनुपस्थित अंक विश्लेषण | Missing Numbers Analysis",
+    "repeating_numbers_impact": "दोहराते अंकों का प्रभाव | Repeating Numbers Impact",
+    "mobile_number_numerology": "मोबाइल अंक विश्लेषण | Mobile Number Numerology",
+    "mobile_life_number_compatibility": "मोबाइल + जीवन अंक संगतता | Mobile + Life Number Compatibility",
+    "email_numerology": "ईमेल अंक विश्लेषण | Email Numerology",
+    "numerology_personality_profile": "अंक व्यक्तित्व प्रोफाइल | Numerology Personality Profile",
+    "current_life_phase_insight": "वर्तमान जीवन चरण संकेत | Current Life Phase Insight",
+    "career_financial_tendencies": "करियर और वित्त प्रवृत्तियां | Career & Financial Tendencies",
+    "relationship_compatibility_patterns": "संबंध संगतता पैटर्न | Relationship Compatibility Patterns",
+    "health_tendencies_from_numbers": "अंकों से स्वास्थ्य प्रवृत्तियां | Health Tendencies from Numbers",
+    "color_alignment": "रंग संतुलन | Color Alignment",
+    "remedies_lifestyle_adjustments": "उपाय और जीवनशैली समायोजन | Remedies and Lifestyle Adjustments",
+    "closing_numerology_guidance": "समापन अंक मार्गदर्शन | Closing Numerology Guidance",
+    "name_number_analysis": "Name Number Analysis",
+    "birth_date_numerology": "Birth Date Numerology",
+    "loshu_grid_intelligence": "Lo Shu Grid Intelligence",
+    "karmic_pattern_intelligence": "Karmic Pattern Intelligence",
+    "hidden_talent_intelligence": "Hidden Talent Intelligence",
+    "personal_year_forecast": "Personal Year Forecast",
+    "lucky_numbers_favorable_dates": "Lucky Numbers & Favorable Dates",
+    "basic_remedies": "Basic Remedy Protocol",
+    "lifestyle_alignment": "Lifestyle Alignment",
+    "closing_synthesis": "Closing Strategic Synthesis",
+    "intelligence_metrics": "Numerology Intelligence Metrics",
+    "archetype_intelligence": "Archetype Intelligence",
+    "career_intelligence": "Career Intelligence",
+    "financial_intelligence": "Financial Intelligence",
+    "numerology_architecture": "Numerology Architecture Blueprint",
+    "planetary_influence": "Planetary Influence Intelligence",
+    "compatibility_intelligence": "Compatibility Intelligence",
+    "life_cycle_timeline": "Life Cycle Timeline",
+    "pinnacle_challenge_cycle_intelligence": "Pinnacle & Challenge Cycle Intelligence",
+    "strategic_guidance": "Strategic Guidance",
+    "name_vibration_optimization": "Name Vibration Optimization",
+    "mobile_number_intelligence": "Mobile Number Intelligence",
+    "email_identity_intelligence": "Email Identity Intelligence",
+    "digital_discipline": "Digital Discipline",
+    "vedic_remedy": "Vedic Remedy Intelligence",
+    "correction_protocol_summary": "Correction Protocol Summary",
+    "leadership_intelligence": "Leadership Intelligence",
+    "business_intelligence": "Business Intelligence",
+    "wealth_energy_blueprint": "Wealth Energy Blueprint",
+    "decision_intelligence": "Decision Intelligence",
+    "emotional_intelligence": "Emotional Intelligence",
+    "strategic_timing_intelligence": "Strategic Timing Intelligence",
+    "growth_blueprint": "Growth Blueprint",
+    "signature_intelligence": "Signature Intelligence",
+    "business_name_intelligence": "Business Name Intelligence",
+    "brand_handle_optimization": "Brand Handle Optimization",
+    "residence_energy_intelligence": "Residence Energy Intelligence",
+    "vehicle_number_intelligence": "Vehicle Number Intelligence",
+    "strategic_execution_roadmap": "Strategic Execution Roadmap",
+}
+
+BASIC_SECTION_KEYS: List[str] = [
+    "executive_numerology_summary",
+    "core_numbers_analysis",
+    "mulank_description",
+    "bhagyank_description",
+    "name_number_analysis",
+    "number_interaction_analysis",
+    "loshu_grid_interpretation",
+    "missing_numbers_analysis",
+    "repeating_numbers_impact",
+    "mobile_number_numerology",
+    "mobile_life_number_compatibility",
+    "email_numerology",
+    "numerology_personality_profile",
+    "current_life_phase_insight",
+    "career_financial_tendencies",
+    "relationship_compatibility_patterns",
+    "health_tendencies_from_numbers",
+    "personal_year_forecast",
+    "lucky_numbers_favorable_dates",
+    "color_alignment",
+    "remedies_lifestyle_adjustments",
+    "closing_numerology_guidance",
+]
+
+PREMIUM_SECTION_KEYS: List[str] = [
+    "executive_summary",
+    "intelligence_metrics",
+    "archetype_intelligence",
+    "career_intelligence",
+    "financial_intelligence",
+    "numerology_architecture",
+    "loshu_grid_intelligence",
+    "planetary_influence",
+    "compatibility_intelligence",
+    "life_cycle_timeline",
+    "pinnacle_challenge_cycle_intelligence",
+    "personal_year_forecast",
+    "strategic_guidance",
+    "name_vibration_optimization",
+    "mobile_number_intelligence",
+    "email_identity_intelligence",
+    "lifestyle_alignment",
+    "digital_discipline",
+    "vedic_remedy",
+    "correction_protocol_summary",
+    "closing_synthesis",
+]
+
+ENTERPRISE_SECTION_KEYS: List[str] = [
+    "executive_summary",
+    "intelligence_metrics",
+    "archetype_intelligence",
+    "leadership_intelligence",
+    "career_intelligence",
+    "business_intelligence",
+    "wealth_energy_blueprint",
+    "decision_intelligence",
+    "emotional_intelligence",
+    "numerology_architecture",
+    "planetary_influence",
+    "loshu_grid_intelligence",
+    "karmic_pattern_intelligence",
+    "hidden_talent_intelligence",
+    "life_cycle_timeline",
+    "pinnacle_challenge_cycle_intelligence",
+    "strategic_timing_intelligence",
+    "compatibility_intelligence",
+    "personal_year_forecast",
+    "strategic_guidance",
+    "growth_blueprint",
+    "name_vibration_optimization",
+    "mobile_number_intelligence",
+    "email_identity_intelligence",
+    "signature_intelligence",
+    "business_name_intelligence",
+    "brand_handle_optimization",
+    "residence_energy_intelligence",
+    "vehicle_number_intelligence",
+    "lifestyle_alignment",
+    "digital_discipline",
+    "vedic_remedy",
+    "correction_protocol_summary",
+    "strategic_execution_roadmap",
+    "closing_synthesis",
+]
+
+TIER_SECTION_KEYS: Dict[str, List[str]] = {
+    "basic": BASIC_SECTION_KEYS,
+    "pro": PREMIUM_SECTION_KEYS,
+    "premium": PREMIUM_SECTION_KEYS,
+    "enterprise": ENTERPRISE_SECTION_KEYS,
+}
+
+
+def get_tier_section_blueprint(plan_name: str) -> Dict[str, object]:
+    tier = (plan_name or "basic").strip().lower()
+    section_keys = TIER_SECTION_KEYS.get(tier, TIER_SECTION_KEYS["basic"])
+
+    return {
+        "plan_tier": tier,
+        "section_count": len(section_keys),
+        "sections": [
+            {
+                "order": index,
+                "key": key,
+                "title": SECTION_TITLES[key],
+            }
+            for index, key in enumerate(section_keys, start=1)
+        ],
+    }
+
+
+def get_all_tier_section_blueprints() -> Dict[str, Dict[str, object]]:
+    return {
+        tier: get_tier_section_blueprint(tier)
+        for tier in ("basic", "pro", "premium", "enterprise")
+    }
